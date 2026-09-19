@@ -4,28 +4,33 @@
 
 local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
 
--- Функция безопасной подгрузки
 local function LoadDoorsScript(path)
     local success, result = pcall(function()
         return game:HttpGet(BaseUrl .. path)
     end)
     
-    if success and result and #result > 0 and not result:find("404: Not Found") then
+    if success and result and #result > 0 then
+        -- Строгая проверка на 404 и HTML-ответы от GitHub
+        if result:find("404") or result:find("Not Found") or result:find("<!DOCTYPE html>") then
+            warn("[ABYSALL] Файл не найден на GitHub (404): " .. path)
+            return
+        end
+
         local exec, err = loadstring(result)
         if exec then
-            exec()
+            task.spawn(exec)
         else
-            warn("[ABYSALL] Ошибка в " .. path .. ": " .. tostring(err))
+            warn("[ABYSALL] Ошибка синтаксиса в " .. path .. ": " .. tostring(err))
         end
     else
-        warn("[ABYSALL] Не удалось загрузить: " .. path)
+        warn("[ABYSALL] Не удалось загрузить (ошибка сети): " .. path)
     end
 end
 
--- Если игра НЕ лобби (то есть сама игра DOORS)
-if game.PlaceId ~= 6516141723 then
+-- PlaceId: 6516141723 — это DOORS (Основная игра)
+-- PlaceId: 65241... (или другие) — это Лобби
+if game.PlaceId == 6516141723 then
     LoadDoorsScript("Games/Doors/Main.txt")
 else
-    -- Если игрок в лобби
     LoadDoorsScript("Games/Doors/Lobby.txt")
 end
