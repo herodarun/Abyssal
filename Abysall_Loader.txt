@@ -58,7 +58,8 @@ local function FirePrompt(prompt)
 end
 
 local function CheckNameMatch(object, keywords)
-    local name = object.Name:lower()
+    if not object then return false end
+    local name = typeof(object) == "Instance" and object.Name:lower() or tostring(object):lower()
     for _, word in ipairs(keywords) do
         if name:find(word:lower()) then return true end
     end
@@ -66,9 +67,17 @@ local function CheckNameMatch(object, keywords)
 end
 
 local function RegisterObject(l)
-    if not l:IsA("ProximityPrompt") then return end
+    if not l or not l:IsA("ProximityPrompt") then return end
+    
     local parent = l.Parent
     if not parent then return end
+    
+    local player = Services.Players.LocalPlayer
+    local pGui = player and player:FindFirstChild("PlayerGui")
+    if (pGui and l:IsDescendantOf(pGui)) or l:IsDescendantOf(game:GetService("CoreGui")) then
+        return
+    end
+
     local T = parent.Parent and parent.Parent.Name or parent.Name
 
     if l.Name == "ActivateEventPrompt" or l.Name == "UsesPrompt" or l.Name == "SkullPrompt" or T == "ChestboxLocked" then
@@ -76,21 +85,21 @@ local function RegisterObject(l)
     end
 
     if l.Name == "ActivateEventPrompt" then
-        if CheckNameMatch(l, {"LiveBreakerRole", "LiveHintBook"}) then
+        if CheckNameMatch(parent, {"LiveBreakerRole", "LiveHintBook"}) or CheckNameMatch(l, {"LiveBreakerRole", "LiveHintBook"}) then
             Objs.Books[l] = l
             return
-        elseif CheckNameMatch(l, {"lever"}) then
+        elseif CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
             Objs.Levers[l] = l
             return
         end
     end
 
-    if l.Name == "ValvePrompt" or CheckNameMatch(l, {"lever"}) then
+    if l.Name == "ValvePrompt" or CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
         Objs.Levers[l] = l
         return
     end
 
-    if CheckNameMatch(l, {"drawer", "toolshed_small", "toolbox", "rolltop", "locker", "table", "knobs", "chest"}) or l.Name == "ModulePrompt" then
+    if CheckNameMatch(parent, {"drawer", "toolshed_small", "toolbox", "rolltop", "locker", "table", "knobs", "chest"}) or l.Name == "ModulePrompt" then
         Objs.Items[l] = l
         return
     end
@@ -98,8 +107,17 @@ local function RegisterObject(l)
     Objs.Items[l] = l
 end
 
-for _, obj in ipairs(Services.Workspace:GetDescendants()) do RegisterObject(obj) end
-Services.Workspace.DescendantAdded:Connect(RegisterObject)
+for _, obj in ipairs(Services.Workspace:GetDescendants()) do 
+    if obj:IsA("ProximityPrompt") then
+        RegisterObject(obj) 
+    end
+end
+
+Services.Workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ProximityPrompt") then
+        RegisterObject(obj)
+    end
+end)
 
 Services.RunService.Heartbeat:Connect(function()
     local player = Services.Players.LocalPlayer
@@ -112,7 +130,11 @@ Services.RunService.Heartbeat:Connect(function()
 
     if Settings and Settings.LootAura then
         for prompt, _ in pairs(Objs.Items) do
-            if not prompt or not prompt.Parent then Objs.Items[prompt] = nil continue end
+            if not prompt or not prompt.Parent then 
+                Objs.Items[prompt] = nil 
+                continue 
+            end
+            
             local parentModel = prompt.Parent.Parent
             local isGold = Settings.IgnoreGold and (prompt.Parent.Name == "GoldPile" or (parentModel and parentModel.Name == "GoldPile"))
             local isLight = Settings.IgnoreLight and CheckNameMatch(prompt.Parent, {"light", "glow"})
@@ -140,7 +162,9 @@ Services.RunService.Heartbeat:Connect(function()
 
     if Settings and Settings.AutoBooks then
         for prompt, _ in pairs(Objs.Books) do
-            if prompt and prompt.Parent then FirePrompt(prompt) end
+            if prompt and prompt.Parent then 
+                FirePrompt(prompt) 
+            end
         end
     end
 
