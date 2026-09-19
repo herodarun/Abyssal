@@ -1,1 +1,5 @@
-Lobby.txt
+-- ========================================================
+-- ABYSALL: DOORS LOBBY SCRIPT (.txt)
+-- ========================================================
+
+print("[ABYSALL] Doors Lobby Script Loaded Successfully!")
