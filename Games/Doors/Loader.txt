@@ -5,12 +5,15 @@
 local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
 
 local function LoadDoorsScript(path)
+    -- Обязательно добавляем random, чтобы обходить кэш
+    local url = BaseUrl .. path .. "?nocache=" .. tostring(math.random(100000, 999999))
+    
     local success, result = pcall(function()
-        return game:HttpGet(BaseUrl .. path)
+        return game:HttpGet(url)
     end)
     
     if success and result and #result > 0 then
-        if result:sub(1, 15):find("404") or result:find("<!DOCTYPE html>") then
+        if result:sub(1, 20):find("404") or result:find("<!DOCTYPE html>") then
             warn("[ABYSALL] Ошибка: файл не найден -> " .. path)
             return
         end
