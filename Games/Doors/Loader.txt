@@ -1,13 +1,34 @@
 -- ========================================================
--- ABYSALL: DOORS GENERAL TAB CONFIGURATION (.txt)
+-- ABYSALL: DOORS GENERAL TAB CONFIGURATION (FIXED)
 -- ========================================================
 
-local Library = Abysall.Interface.Library
-local Window = Library.Window
+-- Ожидаем корректную инициализацию интерфейса
+if not Abysall or not Abysall.Interface or not Abysall.Interface.Library then 
+    return 
+end
 
--- Получаем или создаем вкладку General
+local Library = Abysall.Interface.Library
+
+-- Получаем существующее окно или создаем его, если его еще нет
+local Window = Library.Window or Library:CreateWindow({
+    Title = "Abysall | Doors",
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+-- Создаем вкладку General
 local GeneralTab = Window:AddTab("General")
 local LootGroup = GeneralTab:AddLeftGroupbox("Auto Loot & Auras")
+
+-- Вспомогательная функция для безопасного получения настроек
+local function GetSettings()
+    if getgenv().AuraSettings then
+        return getgenv().AuraSettings
+    end
+    return nil
+end
 
 -- 1. Тумблер Loot Aura
 LootGroup:AddToggle("LootAuraToggle", {
@@ -15,10 +36,8 @@ LootGroup:AddToggle("LootAuraToggle", {
     Default = true,
     Tooltip = "Автоматически собирает лут вокруг персонажа",
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.LootAura = Value
-        end
+        local S = GetSettings()
+        if S then S.LootAura = Value end
     end
 })
 
@@ -31,10 +50,8 @@ LootGroup:AddSlider("LootRadiusSlider", {
     Rounding = 0,
     Compact = false,
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.LootRadius = Value
-        end
+        local S = GetSettings()
+        if S then S.LootRadius = Value end
     end
 })
 
@@ -43,10 +60,8 @@ LootGroup:AddToggle("IgnoreGoldToggle", {
     Text = "Ignore Gold",
     Default = false,
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.IgnoreGold = Value
-        end
+        local S = GetSettings()
+        if S then S.IgnoreGold = Value end
     end
 })
 
@@ -54,10 +69,8 @@ LootGroup:AddToggle("IgnoreGlitchToggle", {
     Text = "Ignore Glitch Cubes",
     Default = true,
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.IgnoreGlitchCubes = Value
-        end
+        local S = GetSettings()
+        if S then S.IgnoreGlitchCubes = Value end
     end
 })
 
@@ -67,10 +80,8 @@ LootGroup:AddToggle("LeverAuraToggle", {
     Default = true,
     Tooltip = "Автоматически дергает рычаги и крутит вентили",
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.LeverAura = Value
-        end
+        local S = GetSettings()
+        if S then S.LeverAura = Value end
     end
 })
 
@@ -78,10 +89,8 @@ LootGroup:AddToggle("AutoBooksToggle", {
     Text = "Auto Collect Books / Papers",
     Default = true,
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.AutoBooks = Value
-        end
+        local S = GetSettings()
+        if S then S.AutoBooks = Value end
     end
 })
 
@@ -89,11 +98,18 @@ LootGroup:AddToggle("DoorReachToggle", {
     Text = "Door Reach (Auto Open)",
     Default = false,
     Callback = function(Value)
-        local Settings = getgenv().AuraSettings or AuraSettings
-        if Settings then
-            Settings.DoorReach = Value
-        end
+        local S = GetSettings()
+        if S then S.DoorReach = Value end
     end
 })
+
+-- Применяем менеджеры темы и сохранений (Settings/Info вкладки)
+if Abysall.Interface.ApplyInfoTab then
+    pcall(function() Abysall.Interface.ApplyInfoTab(Window) end)
+end
+
+if Abysall.Interface.ApplySettingsTab then
+    pcall(function() Abysall.Interface.ApplySettingsTab(Window) end)
+end
 
 print("[ABYSALL] Doors General Tab Loaded Successfully!")
