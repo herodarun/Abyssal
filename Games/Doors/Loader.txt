@@ -10,9 +10,9 @@ local function LoadDoorsScript(path)
     end)
     
     if success and result and #result > 0 then
-        -- Проверяем, не вернул ли GitHub HTML-страницу ошибки 404
+        -- Проверяем 404 только в самом начале ответа GitHub или по тэгу HTML
         if result:sub(1, 15):find("404") or result:find("<!DOCTYPE html>") then
-            warn("[ABYSALL] Ошибка: файл не существует на GitHub -> " .. path)
+            warn("[ABYSALL] Ошибка: файл не найден -> " .. path)
             return
         end
 
