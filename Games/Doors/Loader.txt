@@ -1,115 +1,31 @@
 -- ========================================================
--- ABYSALL: DOORS GENERAL TAB CONFIGURATION (FIXED)
+-- ABYSALL: DOORS GAME ROUTER (.txt)
 -- ========================================================
 
--- Ожидаем корректную инициализацию интерфейса
-if not Abysall or not Abysall.Interface or not Abysall.Interface.Library then 
-    return 
+local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
+
+-- Функция безопасной подгрузки
+local function LoadDoorsScript(path)
+    local success, result = pcall(function()
+        return game:HttpGet(BaseUrl .. path)
+    end)
+    
+    if success and result and #result > 0 and not result:find("404: Not Found") then
+        local exec, err = loadstring(result)
+        if exec then
+            exec()
+        else
+            warn("[ABYSALL] Ошибка в " .. path .. ": " .. tostring(err))
+        end
+    else
+        warn("[ABYSALL] Не удалось загрузить: " .. path)
+    end
 end
 
-local Library = Abysall.Interface.Library
-
--- Получаем существующее окно или создаем его, если его еще нет
-local Window = Library.Window or Library:CreateWindow({
-    Title = "Abysall | Doors",
-    Center = true,
-    AutoShow = true,
-    TabPadding = 8,
-    MenuFadeTime = 0.2
-})
-
--- Создаем вкладку General
-local GeneralTab = Window:AddTab("General")
-local LootGroup = GeneralTab:AddLeftGroupbox("Auto Loot & Auras")
-
--- Вспомогательная функция для безопасного получения настроек
-local function GetSettings()
-    if getgenv().AuraSettings then
-        return getgenv().AuraSettings
-    end
-    return nil
+-- Если игра НЕ лобби (то есть сама игра DOORS)
+if game.PlaceId ~= 6516141723 then
+    LoadDoorsScript("Games/Doors/Main.txt")
+else
+    -- Если игрок в лобби
+    LoadDoorsScript("Games/Doors/Lobby.txt")
 end
-
--- 1. Тумблер Loot Aura
-LootGroup:AddToggle("LootAuraToggle", {
-    Text = "Loot Aura",
-    Default = true,
-    Tooltip = "Автоматически собирает лут вокруг персонажа",
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.LootAura = Value end
-    end
-})
-
--- 2. Слайдер радиуса подбора
-LootGroup:AddSlider("LootRadiusSlider", {
-    Text = "Loot Radius",
-    Default = 12,
-    Min = 5,
-    Max = 30,
-    Rounding = 0,
-    Compact = false,
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.LootRadius = Value end
-    end
-})
-
--- 3. Фильтры для Loot Aura
-LootGroup:AddToggle("IgnoreGoldToggle", {
-    Text = "Ignore Gold",
-    Default = false,
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.IgnoreGold = Value end
-    end
-})
-
-LootGroup:AddToggle("IgnoreGlitchToggle", {
-    Text = "Ignore Glitch Cubes",
-    Default = true,
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.IgnoreGlitchCubes = Value end
-    end
-})
-
--- 4. Дополнительные ауры
-LootGroup:AddToggle("LeverAuraToggle", {
-    Text = "Lever & Valve Aura",
-    Default = true,
-    Tooltip = "Автоматически дергает рычаги и крутит вентили",
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.LeverAura = Value end
-    end
-})
-
-LootGroup:AddToggle("AutoBooksToggle", {
-    Text = "Auto Collect Books / Papers",
-    Default = true,
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.AutoBooks = Value end
-    end
-})
-
-LootGroup:AddToggle("DoorReachToggle", {
-    Text = "Door Reach (Auto Open)",
-    Default = false,
-    Callback = function(Value)
-        local S = GetSettings()
-        if S then S.DoorReach = Value end
-    end
-})
-
--- Применяем менеджеры темы и сохранений (Settings/Info вкладки)
-if Abysall.Interface.ApplyInfoTab then
-    pcall(function() Abysall.Interface.ApplyInfoTab(Window) end)
-end
-
-if Abysall.Interface.ApplySettingsTab then
-    pcall(function() Abysall.Interface.ApplySettingsTab(Window) end)
-end
-
-print("[ABYSALL] Doors General Tab Loaded Successfully!")
