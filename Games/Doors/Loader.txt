@@ -1,8 +1,9 @@
 -- ========================================================
--- ABYSALL: UNIVERSAL FORCED ROUTER (.txt)
+-- ABYSALL: INSTANT LOADER (MVDN / JSDELIVR)
 -- ========================================================
 
-local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
+-- Использование jsdelivr CDN полностью обходит кэш raw.githubusercontent.com
+local BaseUrl = "https://cdn.jsdelivr.net/gh/herodarun/Abyssal@main/"
 local targetPath = "Games/Doors/Main.txt"
 
 local url = BaseUrl .. targetPath .. "?nocache=" .. tostring(math.random(100000, 999999))
@@ -18,7 +19,7 @@ if success and result and #result > 0 then
 
     local exec, err = loadstring(result)
     if exec then
-        print("[ABYSALL] Принудительный запуск Main.txt на PlaceId: " .. tostring(game.PlaceId))
+        print("[ABYSALL] Мгновенный запуск Main.txt на PlaceId: " .. tostring(game.PlaceId))
         task.spawn(exec)
     else
         warn("[ABYSALL] Ошибка синтаксиса в " .. targetPath .. ": " .. tostring(err))
