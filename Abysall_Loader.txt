@@ -1,153 +1,158 @@
 -- ========================================================
--- ABYSALL: DOORS INTERFACE LOADER (.txt)
+-- ABYSALL LOADER (Root Script)
 -- ========================================================
 
-if not Abysall or not Abysall.Interface or not Abysall.Interface.Library then 
-    return 
+-- Настройки по умолчанию
+getgenv().AuraSettings = getgenv().AuraSettings or {
+    LootAura = true,
+    LootRadius = 12,
+    IgnoreGold = false,
+    IgnoreLight = false,
+    IgnoreGlitchCubes = true,
+    LeverAura = true,
+    LeverRadius = 15,
+    AutoBooks = true,
+    DoorReach = false
+}
+
+getgenv().Abysall = getgenv().Abysall or {}
+
+local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
+
+local function LoadScript(path)
+    local success, result = pcall(function()
+        return game:HttpGet(BaseUrl .. path)
+    end)
+    if success and result and #result > 0 and not result:find("404: Not Found") then
+        local exec, err = loadstring(result)
+        if exec then
+            exec()
+        else
+            warn("[ABYSALL] Ошибка в " .. path .. ": " .. tostring(err))
+        end
+    else
+        warn("[ABYSALL] Ошибка загрузки файла: " .. path)
+    end
 end
 
-local Library = Abysall.Interface.Library
-local Window = Library.Window or Library:CreateWindow({
-    Title = "Abysall | Doors",
-    Center = true,
-    AutoShow = true,
-    TabPadding = 8,
-    MenuFadeTime = 0.2
+-- Запуск логики аур (Heartbeat)
+local Services = setmetatable({}, {
+    __index = function(_, name) return game:GetService(name) end
 })
 
-local GeneralTab = Window:AddTab("General")
+local Objs = { Items = {}, Levers = {}, Books = {} }
 
--- --------------------------------------------------------
--- ЛЕВАЯ КОЛОНКА: Управление аурами из Abysall_Loader
--- --------------------------------------------------------
-local LootGroup = GeneralTab:AddLeftGroupbox("Auto Loot & Auras")
-
-LootGroup:AddToggle("LootAuraToggle", {
-    Text = "Loot Aura",
-    Default = true,
-    Tooltip = "Автоматически собирает лут вокруг персонажа",
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.LootAura = Value end
+local function FirePrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return end
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    else
+        prompt:InputHoldBegin()
+        prompt:InputHoldEnd()
     end
-})
+end
 
-LootGroup:AddSlider("LootRadiusSlider", {
-    Text = "Loot Radius",
-    Default = 12,
-    Min = 5,
-    Max = 30,
-    Rounding = 0,
-    Compact = false,
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.LootRadius = Value end
+local function CheckNameMatch(object, keywords)
+    if not object then return false end
+    local name = typeof(object) == "Instance" and object.Name:lower() or tostring(object):lower()
+    for _, word in ipairs(keywords) do
+        if name:find(word:lower()) then return true end
     end
-})
+    return false
+end
 
-LootGroup:AddToggle("IgnoreGoldToggle", {
-    Text = "Ignore Gold",
-    Default = false,
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.IgnoreGold = Value end
-    end
-})
+local function RegisterObject(l)
+    if not l or not l:IsA("ProximityPrompt") then return end
+    local parent = l.Parent
+    if not parent then return end
+    
+    local player = Services.Players.LocalPlayer
+    local pGui = player and player:FindFirstChild("PlayerGui")
+    if (pGui and l:IsDescendantOf(pGui)) or l:IsDescendantOf(Services.CoreGui) then return end
 
-LootGroup:AddToggle("IgnoreGlitchToggle", {
-    Text = "Ignore Glitch Cubes",
-    Default = true,
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.IgnoreGlitchCubes = Value end
-    end
-})
+    local T = parent.Parent and parent.Parent.Name or parent.Name
+    if l.Name == "ActivateEventPrompt" or l.Name == "UsesPrompt" or l.Name == "SkullPrompt" or T == "ChestboxLocked" then return end
 
-LootGroup:AddToggle("LeverAuraToggle", {
-    Text = "Lever & Valve Aura",
-    Default = true,
-    Tooltip = "Автоматически дергает рычаги и крутит вентили",
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.LeverAura = Value end
-    end
-})
-
-LootGroup:AddToggle("AutoBooksToggle", {
-    Text = "Auto Collect Books / Papers",
-    Default = true,
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.AutoBooks = Value end
-    end
-})
-
-LootGroup:AddToggle("DoorReachToggle", {
-    Text = "Door Reach (Auto Open)",
-    Default = false,
-    Callback = function(Value)
-        if getgenv().AuraSettings then getgenv().AuraSettings.DoorReach = Value end
-    end
-})
-
--- --------------------------------------------------------
--- ПРАВАЯ КОЛОНКА: Персонаж и Скорость
--- --------------------------------------------------------
-local MainGroup = GeneralTab:AddRightGroupbox("Movement & Visuals")
-
-MainGroup:AddToggle("SpeedToggle", {
-    Text = "Enable Speedhack",
-    Default = false,
-    Callback = function(Value)
-        getgenv().SpeedEnabled = Value
-    end
-})
-
-MainGroup:AddSlider("SpeedSlider", {
-    Text = "WalkSpeed",
-    Default = 16,
-    Min = 16,
-    Max = 25,
-    Rounding = 0,
-    Callback = function(Value)
-        getgenv().SpeedValue = Value
-    end
-})
-
-MainGroup:AddToggle("NoclipToggle", {
-    Text = "Noclip",
-    Default = false,
-    Callback = function(Value)
-        getgenv().NoclipEnabled = Value
-    end
-})
-
-MainGroup:AddToggle("FullbrightToggle", {
-    Text = "Fullbright (No Darkness)",
-    Default = false,
-    Callback = function(Value)
-        if Value then
-            game:GetService("Lighting").Ambient = Color3.fromRGB(255, 255, 255)
-        else
-            game:GetService("Lighting").Ambient = Color3.fromRGB(0, 0, 0)
+    if l.Name == "ActivateEventPrompt" then
+        if CheckNameMatch(parent, {"LiveBreakerRole", "LiveHintBook"}) or CheckNameMatch(l, {"LiveBreakerRole", "LiveHintBook"}) then
+            Objs.Books[l] = l
+            return
+        elseif CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
+            Objs.Levers[l] = l
+            return
         end
     end
-})
 
--- Цикл обработки физики игрока
-task.spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            local char = game.Players.LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then
-                if getgenv().SpeedEnabled then
-                    char.Humanoid.WalkSpeed = getgenv().SpeedValue or 20
+    if l.Name == "ValvePrompt" or CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
+        Objs.Levers[l] = l
+        return
+    end
+
+    Objs.Items[l] = l
+end
+
+for _, obj in ipairs(Services.Workspace:GetDescendants()) do 
+    if obj:IsA("ProximityPrompt") then RegisterObject(obj) end
+end
+
+Services.Workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("ProximityPrompt") then RegisterObject(obj) end
+end)
+
+Services.RunService.Heartbeat:Connect(function()
+    local player = Services.Players.LocalPlayer
+    local char = player and player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local pPos = hrp.Position
+    local Settings = getgenv().AuraSettings
+
+    if Settings and Settings.LootAura then
+        for prompt, _ in pairs(Objs.Items) do
+            if not prompt or not prompt.Parent then Objs.Items[prompt] = nil continue end
+            local parentModel = prompt.Parent.Parent
+            local isGold = Settings.IgnoreGold and (prompt.Parent.Name == "GoldPile" or (parentModel and parentModel.Name == "GoldPile"))
+            local isLight = Settings.IgnoreLight and CheckNameMatch(prompt.Parent, {"light", "glow"})
+            local isGlitch = Settings.IgnoreGlitchCubes and (prompt.Parent.Name == "GlitchCube" or (parentModel and parentModel.Name == "GlitchCube"))
+
+            if isGold or isLight or isGlitch then continue end
+
+            local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+            if part and (part.Position - pPos).Magnitude <= Settings.LootRadius then
+                FirePrompt(prompt)
+            end
+        end
+    end
+
+    if Settings and Settings.LeverAura then
+        for prompt, _ in pairs(Objs.Levers) do
+            if prompt and prompt.Parent then
+                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                if part and (part.Position - pPos).Magnitude <= Settings.LeverRadius then
+                    FirePrompt(prompt)
                 end
             end
-            if getgenv().NoclipEnabled and char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+
+    if Settings and Settings.AutoBooks then
+        for prompt, _ in pairs(Objs.Books) do
+            if prompt and prompt.Parent then FirePrompt(prompt) end
+        end
+    end
+
+    if Settings and Settings.DoorReach and not Services.Workspace:FindFirstChild("A1000") then
+        local currentRooms = Services.Workspace:FindFirstChild("CurrentRooms")
+        if currentRooms then
+            for _, room in ipairs(currentRooms:GetChildren()) do
+                local door = room:FindFirstChild("Door")
+                if door and door:FindFirstChild("ClientOpen") then
+                    door.ClientOpen:FireServer()
                 end
             end
-        end)
+        end
     end
 end)
 
-if Abysall.Interface.ApplyInfoTab then pcall(function() Abysall.Interface.ApplyInfoTab(Window) end) end
-if Abysall.Interface.ApplySettingsTab then pcall(function() Abysall.Interface.ApplySettingsTab(Window) end) end
-
-print("[ABYSALL] Doors Interface Loaded Successfully!")
+-- Вызов роутера
+LoadScript("Games/Doors/Loader.txt")
