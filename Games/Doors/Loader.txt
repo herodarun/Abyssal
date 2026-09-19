@@ -10,9 +10,9 @@ local function LoadDoorsScript(path)
     end)
     
     if success and result and #result > 0 then
-        -- Строгая проверка на 404 и HTML-ответы от GitHub
-        if result:find("404") or result:find("Not Found") or result:find("<!DOCTYPE html>") then
-            warn("[ABYSALL] Файл не найден на GitHub (404): " .. path)
+        -- Проверяем, не вернул ли GitHub HTML-страницу ошибки 404
+        if result:sub(1, 15):find("404") or result:find("<!DOCTYPE html>") then
+            warn("[ABYSALL] Ошибка: файл не существует на GitHub -> " .. path)
             return
         end
 
@@ -23,12 +23,10 @@ local function LoadDoorsScript(path)
             warn("[ABYSALL] Ошибка синтаксиса в " .. path .. ": " .. tostring(err))
         end
     else
-        warn("[ABYSALL] Не удалось загрузить (ошибка сети): " .. path)
+        warn("[ABYSALL] Ошибка сети при скачивании: " .. path)
     end
 end
 
--- PlaceId: 6516141723 — это DOORS (Основная игра)
--- PlaceId: 65241... (или другие) — это Лобби
 if game.PlaceId == 6516141723 then
     LoadDoorsScript("Games/Doors/Main.txt")
 else
