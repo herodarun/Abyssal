@@ -5,9 +5,7 @@
 local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
 
 local function LoadDoorsScript(path)
-    -- Обязательно добавляем random, чтобы обходить кэш
     local url = BaseUrl .. path .. "?nocache=" .. tostring(math.random(100000, 999999))
-    
     local success, result = pcall(function()
         return game:HttpGet(url)
     end)
@@ -29,8 +27,18 @@ local function LoadDoorsScript(path)
     end
 end
 
-if game.PlaceId == 6516141723 then
+-- Список всех известных PlaceId для основной игры DOORS (Hotel, Mines, Backrooms)
+local MainGamePlaces = {
+    [6516141723] = true, -- Старый Отель
+    [6839171723] = true, -- Основная игра (Hotel / Mines / Floors)
+    [10901622312] = true, -- The Rooms / Backrooms
+}
+
+-- Проверяем, находится ли игрок в основной игре
+if MainGamePlaces[game.PlaceId] then
+    print("[ABYSALL] Обнаружена основная игра DOORS (PlaceId: " .. tostring(game.PlaceId) .. "). Загрузка Main.txt...")
     LoadDoorsScript("Games/Doors/Main.txt")
 else
+    print("[ABYSALL] Обнаружено Лобби (PlaceId: " .. tostring(game.PlaceId) .. "). Загрузка Lobby.txt...")
     LoadDoorsScript("Games/Doors/Lobby.txt")
 end
