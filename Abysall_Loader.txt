@@ -1,28 +1,153 @@
 -- ========================================================
--- ABYSALL: DOORS ROUTER (.txt)
+-- ABYSALL: DOORS INTERFACE LOADER (.txt)
 -- ========================================================
 
-local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
+if not Abysall or not Abysall.Interface or not Abysall.Interface.Library then 
+    return 
+end
 
-local function LoadDoorsScript(path)
-    local success, result = pcall(function()
-        return game:HttpGet(BaseUrl .. path)
-    end)
-    
-    if success and result and #result > 0 and not result:find("404: Not Found") then
-        local exec, err = loadstring(result)
-        if exec then
-            exec()
-        else
-            warn("[ABYSALL] Ошибка в " .. path .. ": " .. tostring(err))
-        end
-    else
-        warn("[ABYSALL] Не удалось загрузить: " .. path)
+local Library = Abysall.Interface.Library
+local Window = Library.Window or Library:CreateWindow({
+    Title = "Abysall | Doors",
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local GeneralTab = Window:AddTab("General")
+
+-- --------------------------------------------------------
+-- ЛЕВАЯ КОЛОНКА: Управление аурами из Abysall_Loader
+-- --------------------------------------------------------
+local LootGroup = GeneralTab:AddLeftGroupbox("Auto Loot & Auras")
+
+LootGroup:AddToggle("LootAuraToggle", {
+    Text = "Loot Aura",
+    Default = true,
+    Tooltip = "Автоматически собирает лут вокруг персонажа",
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.LootAura = Value end
     end
-end
+})
 
-if game.PlaceId ~= 6516141723 then
-    LoadDoorsScript("Games/Doors/Main.txt")
-else
-    LoadDoorsScript("Games/Doors/Lobby.txt")
-end
+LootGroup:AddSlider("LootRadiusSlider", {
+    Text = "Loot Radius",
+    Default = 12,
+    Min = 5,
+    Max = 30,
+    Rounding = 0,
+    Compact = false,
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.LootRadius = Value end
+    end
+})
+
+LootGroup:AddToggle("IgnoreGoldToggle", {
+    Text = "Ignore Gold",
+    Default = false,
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.IgnoreGold = Value end
+    end
+})
+
+LootGroup:AddToggle("IgnoreGlitchToggle", {
+    Text = "Ignore Glitch Cubes",
+    Default = true,
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.IgnoreGlitchCubes = Value end
+    end
+})
+
+LootGroup:AddToggle("LeverAuraToggle", {
+    Text = "Lever & Valve Aura",
+    Default = true,
+    Tooltip = "Автоматически дергает рычаги и крутит вентили",
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.LeverAura = Value end
+    end
+})
+
+LootGroup:AddToggle("AutoBooksToggle", {
+    Text = "Auto Collect Books / Papers",
+    Default = true,
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.AutoBooks = Value end
+    end
+})
+
+LootGroup:AddToggle("DoorReachToggle", {
+    Text = "Door Reach (Auto Open)",
+    Default = false,
+    Callback = function(Value)
+        if getgenv().AuraSettings then getgenv().AuraSettings.DoorReach = Value end
+    end
+})
+
+-- --------------------------------------------------------
+-- ПРАВАЯ КОЛОНКА: Персонаж и Скорость
+-- --------------------------------------------------------
+local MainGroup = GeneralTab:AddRightGroupbox("Movement & Visuals")
+
+MainGroup:AddToggle("SpeedToggle", {
+    Text = "Enable Speedhack",
+    Default = false,
+    Callback = function(Value)
+        getgenv().SpeedEnabled = Value
+    end
+})
+
+MainGroup:AddSlider("SpeedSlider", {
+    Text = "WalkSpeed",
+    Default = 16,
+    Min = 16,
+    Max = 25,
+    Rounding = 0,
+    Callback = function(Value)
+        getgenv().SpeedValue = Value
+    end
+})
+
+MainGroup:AddToggle("NoclipToggle", {
+    Text = "Noclip",
+    Default = false,
+    Callback = function(Value)
+        getgenv().NoclipEnabled = Value
+    end
+})
+
+MainGroup:AddToggle("FullbrightToggle", {
+    Text = "Fullbright (No Darkness)",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            game:GetService("Lighting").Ambient = Color3.fromRGB(255, 255, 255)
+        else
+            game:GetService("Lighting").Ambient = Color3.fromRGB(0, 0, 0)
+        end
+    end
+})
+
+-- Цикл обработки физики игрока
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                if getgenv().SpeedEnabled then
+                    char.Humanoid.WalkSpeed = getgenv().SpeedValue or 20
+                end
+            end
+            if getgenv().NoclipEnabled and char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+    end
+end)
+
+if Abysall.Interface.ApplyInfoTab then pcall(function() Abysall.Interface.ApplyInfoTab(Window) end) end
+if Abysall.Interface.ApplySettingsTab then pcall(function() Abysall.Interface.ApplySettingsTab(Window) end) end
+
+print("[ABYSALL] Doors Interface Loaded Successfully!")
