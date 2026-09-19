@@ -1,229 +1,28 @@
-if Abysall then
-    return 
-end
-
-getgenv().AuraSettings = {
-    LootAura = true,
-    LootRadius = 12,
-    IgnoreGold = false,
-    IgnoreLight = false,
-    IgnoreGlitchCubes = true,
-    
-    LeverAura = true,
-    LeverRadius = 15,
-    
-    AutoBooks = true,
-    DoorReach = false
-}
-
-getgenv().Abysall = {
-    Legit = true
-}
-
-local GameList = {
-    [2440500124] = "Doors"
-}
+-- ========================================================
+-- ABYSALL: DOORS ROUTER (.txt)
+-- ========================================================
 
 local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
 
--- Функция безопасной подгрузки файлов с GitHub
-local function SafeGet(path)
-    local url = BaseUrl .. path
+local function LoadDoorsScript(path)
     local success, result = pcall(function()
-        return game:HttpGet(url)
+        return game:HttpGet(BaseUrl .. path)
     end)
     
     if success and result and #result > 0 and not result:find("404: Not Found") then
-        local executable, err = loadstring(result)
-        if executable then
-            return executable
+        local exec, err = loadstring(result)
+        if exec then
+            exec()
         else
-            warn("[ABYSALL] Ошибка синтаксиса в файле " .. path .. ": " .. tostring(err))
+            warn("[ABYSALL] Ошибка в " .. path .. ": " .. tostring(err))
         end
     else
-        warn("[ABYSALL] Не удалось загрузить файл: " .. url)
-    end
-    return nil
-end
-
--- Загрузка базовых компонентов
-local EnvFunc = SafeGet("Components/Environment.txt")
-local EspFunc = SafeGet("Components/ESP.txt")
-
-getgenv().Abysall = {
-    Environment = EnvFunc and EnvFunc() or {},
-    ESPLibrary = EspFunc and EspFunc() or {},
-    Legit = true,
-}
-
-local function CloneReference(Object)
-    if Abysall and Abysall.Environment and Abysall.Environment.cloneref then
-        return Abysall.Environment.cloneref(Object)
-    else
-        return Object
+        warn("[ABYSALL] Не удалось загрузить: " .. path)
     end
 end
 
-local Services = setmetatable({}, {
-    __index = function(self, Name)
-        return CloneReference(game:GetService(Name))
-    end
-})
-
--- Логика Аур
-local Objs = { Items = {}, Levers = {}, Books = {} }
-
-local function FirePrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return end
-    if fireproximityprompt then
-        fireproximityprompt(prompt)
-    else
-        prompt:InputHoldBegin()
-        prompt:InputHoldEnd()
-    end
-end
-
-local function CheckNameMatch(object, keywords)
-    if not object then return false end
-    local name = typeof(object) == "Instance" and object.Name:lower() or tostring(object):lower()
-    for _, word in ipairs(keywords) do
-        if name:find(word:lower()) then return true end
-    end
-    return false
-end
-
-local function RegisterObject(l)
-    if not l or not l:IsA("ProximityPrompt") then return end
-    
-    local parent = l.Parent
-    if not parent then return end
-    
-    local player = Services.Players.LocalPlayer
-    local pGui = player and player:FindFirstChild("PlayerGui")
-    if (pGui and l:IsDescendantOf(pGui)) or l:IsDescendantOf(game:GetService("CoreGui")) then
-        return
-    end
-
-    local T = parent.Parent and parent.Parent.Name or parent.Name
-
-    if l.Name == "ActivateEventPrompt" or l.Name == "UsesPrompt" or l.Name == "SkullPrompt" or T == "ChestboxLocked" then
-        return
-    end
-
-    if l.Name == "ActivateEventPrompt" then
-        if CheckNameMatch(parent, {"LiveBreakerRole", "LiveHintBook"}) or CheckNameMatch(l, {"LiveBreakerRole", "LiveHintBook"}) then
-            Objs.Books[l] = l
-            return
-        elseif CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
-            Objs.Levers[l] = l
-            return
-        end
-    end
-
-    if l.Name == "ValvePrompt" or CheckNameMatch(parent, {"lever"}) or CheckNameMatch(l, {"lever"}) then
-        Objs.Levers[l] = l
-        return
-    end
-
-    if CheckNameMatch(parent, {"drawer", "toolshed_small", "toolbox", "rolltop", "locker", "table", "knobs", "chest"}) or l.Name == "ModulePrompt" then
-        Objs.Items[l] = l
-        return
-    end
-
-    Objs.Items[l] = l
-end
-
-for _, obj in ipairs(Services.Workspace:GetDescendants()) do 
-    if obj:IsA("ProximityPrompt") then
-        RegisterObject(obj) 
-    end
-end
-
-Services.Workspace.DescendantAdded:Connect(function(obj)
-    if obj:IsA("ProximityPrompt") then
-        RegisterObject(obj)
-    end
-end)
-
-Services.RunService.Heartbeat:Connect(function()
-    local player = Services.Players.LocalPlayer
-    local char = player and player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local pPos = hrp.Position
-
-    local Settings = getgenv().AuraSettings
-
-    if Settings and Settings.LootAura then
-        for prompt, _ in pairs(Objs.Items) do
-            if not prompt or not prompt.Parent then 
-                Objs.Items[prompt] = nil 
-                continue 
-            end
-            
-            local parentModel = prompt.Parent.Parent
-            local isGold = Settings.IgnoreGold and (prompt.Parent.Name == "GoldPile" or (parentModel and parentModel.Name == "GoldPile"))
-            local isLight = Settings.IgnoreLight and CheckNameMatch(prompt.Parent, {"light", "glow"})
-            local isGlitch = Settings.IgnoreGlitchCubes and (prompt.Parent.Name == "GlitchCube" or (parentModel and parentModel.Name == "GlitchCube"))
-
-            if isGold or isLight or isGlitch then continue end
-
-            local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-            if part and (part.Position - pPos).Magnitude <= Settings.LootRadius then
-                FirePrompt(prompt)
-            end
-        end
-    end
-
-    if Settings and Settings.LeverAura then
-        for prompt, _ in pairs(Objs.Levers) do
-            if prompt and prompt.Parent then
-                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                if part and (part.Position - pPos).Magnitude <= Settings.LeverRadius then
-                    FirePrompt(prompt)
-                end
-            end
-        end
-    end
-
-    if Settings and Settings.AutoBooks then
-        for prompt, _ in pairs(Objs.Books) do
-            if prompt and prompt.Parent then 
-                FirePrompt(prompt) 
-            end
-        end
-    end
-
-    if Settings and Settings.DoorReach and not Services.Workspace:FindFirstChild("A1000") then
-        local currentRooms = Services.Workspace:FindFirstChild("CurrentRooms")
-        if currentRooms then
-            for _, room in ipairs(currentRooms:GetChildren()) do
-                local door = room:FindFirstChild("Door")
-                if door and door:FindFirstChild("ClientOpen") then
-                    door.ClientOpen:FireServer()
-                end
-            end
-        end
-    end
-end)
-
--- Загрузка интерфейса
-local InterfaceFunc = SafeGet("Components/Interface.txt")
-local AnalyticsFunc = SafeGet("Components/Analytics.txt")
-
-if InterfaceFunc then Abysall.Interface = InterfaceFunc() end
-if AnalyticsFunc then Abysall.Analytics = AnalyticsFunc() end
-
--- Загрузка специфичного файла игры
-local CurrentGame = GameList[game.GameId]
-if CurrentGame then
-    local GameLoader = SafeGet("Games/" .. CurrentGame .. "/Loader.txt")
-    if GameLoader then 
-        GameLoader() 
-    else
-        warn("[ABYSALL] Не удалось запустить Games/" .. CurrentGame .. "/Loader.txt")
-    end
+if game.PlaceId ~= 6516141723 then
+    LoadDoorsScript("Games/Doors/Main.txt")
 else
-    local UniversalLoader = SafeGet("Games/Universal/Loader.txt")
-    if UniversalLoader then UniversalLoader() end
+    LoadDoorsScript("Games/Doors/Lobby.txt")
 end
