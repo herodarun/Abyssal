@@ -19,14 +19,14 @@ getgenv().Abysall = getgenv().Abysall or {}
 local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/main/"
 
 local function LoadScript(path)
-    local url = BaseUrl .. path
     local success, result = pcall(function()
-        return game:HttpGet(url)
+        return game:HttpGet(BaseUrl .. path)
     end)
     
     if success and result and #result > 0 then
-        if result:find("404: Not Found") or result:find("<!DOCTYPE html>") then
-            warn("[ABYSALL] Файл не найден на GitHub (404): " .. path)
+        -- Проверяем 404 строго в самом начале строки ответа
+        if result:sub(1, 15):find("404") or result:find("<!DOCTYPE html>") then
+            warn("[ABYSALL] Ошибка: файл не найден -> " .. path)
             return false
         end
 
@@ -39,7 +39,7 @@ local function LoadScript(path)
             return false
         end
     else
-        warn("[ABYSALL] Ошибка HttpGet при скачивании: " .. path .. " | Ошибка: " .. tostring(result))
+        warn("[ABYSALL] Ошибка сети при скачивании: " .. path)
         return false
     end
 end
