@@ -1,6 +1,99 @@
-local BaseUrl = "https://raw.githubusercontent.com/bocaj111004/Abysall/refs/heads/main/"
-if game.PlaceId ~= 6516141723 then
-    loadstring(game:HttpGet(BaseUrl .. "Games/Doors/Main.luau"))()
-else
-    loadstring(game:HttpGet(BaseUrl .. "Games/Doors/Lobby.luau"))()
-end
+-- ========================================================
+-- ABYSALL: DOORS GENERAL TAB CONFIGURATION (.txt)
+-- ========================================================
+
+local Library = Abysall.Interface.Library
+local Window = Library.Window
+
+-- Получаем или создаем вкладку General
+local GeneralTab = Window:AddTab("General")
+local LootGroup = GeneralTab:AddLeftGroupbox("Auto Loot & Auras")
+
+-- 1. Тумблер Loot Aura
+LootGroup:AddToggle("LootAuraToggle", {
+    Text = "Loot Aura",
+    Default = true,
+    Tooltip = "Автоматически собирает лут вокруг персонажа",
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.LootAura = Value
+        end
+    end
+})
+
+-- 2. Слайдер радиуса подбора
+LootGroup:AddSlider("LootRadiusSlider", {
+    Text = "Loot Radius",
+    Default = 12,
+    Min = 5,
+    Max = 30,
+    Rounding = 0,
+    Compact = false,
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.LootRadius = Value
+        end
+    end
+})
+
+-- 3. Фильтры для Loot Aura
+LootGroup:AddToggle("IgnoreGoldToggle", {
+    Text = "Ignore Gold",
+    Default = false,
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.IgnoreGold = Value
+        end
+    end
+})
+
+LootGroup:AddToggle("IgnoreGlitchToggle", {
+    Text = "Ignore Glitch Cubes",
+    Default = true,
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.IgnoreGlitchCubes = Value
+        end
+    end
+})
+
+-- 4. Дополнительные ауры
+LootGroup:AddToggle("LeverAuraToggle", {
+    Text = "Lever & Valve Aura",
+    Default = true,
+    Tooltip = "Автоматически дергает рычаги и крутит вентили",
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.LeverAura = Value
+        end
+    end
+})
+
+LootGroup:AddToggle("AutoBooksToggle", {
+    Text = "Auto Collect Books / Papers",
+    Default = true,
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.AutoBooks = Value
+        end
+    end
+})
+
+LootGroup:AddToggle("DoorReachToggle", {
+    Text = "Door Reach (Auto Open)",
+    Default = false,
+    Callback = function(Value)
+        local Settings = getgenv().AuraSettings or AuraSettings
+        if Settings then
+            Settings.DoorReach = Value
+        end
+    end
+})
+
+print("[ABYSALL] Doors General Tab Loaded Successfully!")
