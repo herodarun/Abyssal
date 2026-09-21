@@ -4149,7 +4149,7 @@ end
 local AutoInteractBlacklist = {
 	HidePrompt=true, RiftPrompt=true, StarRiftPrompt=true, InteractPrompt=true, ClimbPrompt=true,
 	DonatePrompt=true, DialoguePrompt=true, RevivePrompt=true, EnterPrompt=true, AnimatePrompt=true,
-	ToolEventPrompt=true, Prompt=true, PropPrompt=true
+	ToolEventPrompt=true, Prompt=true, PropPrompt=true, SeatPrompt=true
 }
 
 local TriggerDebounce = false
@@ -4223,38 +4223,6 @@ Functions.TriggerPrompt = function(Prompt)
 		end
 	end
 
-	-- Проверка радиуса взаимодействия
-	local PromptParent = Prompt.Parent
-	local PromptPos = PromptParent:IsA("Model") and PromptParent:GetPivot().Position or (PromptParent:IsA("BasePart") and PromptParent.Position)
-	
-	if PromptPos and RootPart then
-		local Distance = (RootPart.Position - PromptPos).Magnitude
-		local MaxRadius = (Options.AutoInteractRadius and Options.AutoInteractRadius.Value) or 50
-		if Distance > MaxRadius then return end
-	end
-
-	-- Активация промпта
-	TriggerDebounce = true
-	task.spawn(function()
-		Functions.FirePrompt(Prompt)
-		local Delay = (Options.AutoInteractDelay and Options.AutoInteractDelay.Value) or 0.1
-		task.wait(Delay)
-		TriggerDebounce = false
-	end)
-end
-
--- Основной цикл вызова взаимодействия (вставляется сразу после функции)
-Connections.AutoInteractLoop = Services.RunService.Heartbeat:Connect(function()
-	if not Toggles.AutoInteractToggle or not Toggles.AutoInteractToggle.Value then return end
-	if not RootPart then return end
-
-	for _, Object in ipairs(Objects.Prompts) do
-		if Object and Object:IsA("ProximityPrompt") and Object.Enabled then
-			Functions.TriggerPrompt(Object)
-		end
-	end
-end)
-
 	if Prompt.Name == "HerbPrompt" then
 		local Effects = Globals.MainUI.MainFrame.Healthbar:FindFirstChild("Effects")
 		if Effects and Effects.HerbGreenEffect.Visible then return end
@@ -4264,32 +4232,48 @@ end)
 	if Prompt.Parent.Name == "AlarmClock" and Functions.HasItem("AlarmClock") then return end
 	if Prompt.Parent.Name == "KeyObtainFake" or Prompt.Parent.Name == "TithingPlate" then return end
 
-	Functions.FirePrompt(Prompt)
+	local PromptParent = Prompt.Parent
+	local PromptPos = PromptParent:IsA("Model") and PromptParent:GetPivot().Position or (PromptParent:IsA("BasePart") and PromptParent.Position)
+	
+	if PromptPos and RootPart then
+		local Distance = (RootPart.Position - PromptPos).Magnitude
+		local MaxRadius = (Options.AutoInteractRadius and Options.AutoInteractRadius.Value) or 50
+		if Distance > MaxRadius then return end
+	end
+
 	TriggerDebounce = true
-	if Floor == "OldHotel" then task.wait() end
-	TriggerDebounce = false
+	task.spawn(function()
+		Functions.FirePrompt(Prompt)
+		local Delay = (Options.AutoInteractDelay and Options.AutoInteractDelay.Value) or 0.1
+		if Floor == "OldHotel" then task.wait() else task.wait(Delay) end
+		TriggerDebounce = false
+	end)
 end
 
 Globals.LastAutoInteractFire = tick()
 Connections.AutoInteract = Services.RunService.Heartbeat:Connect(function()
-	local Active = Toggles.AutoInteractToggle.Value or Options.AutoInteractKeybind:GetState()
+	local Active = (Toggles.AutoInteractToggle and Toggles.AutoInteractToggle.Value) or (Options.AutoInteractKeybind and Options.AutoInteractKeybind:GetState())
     if not Active then return end
     if tick() - Globals.LastAutoInteractFire < 1/60 then return end
+	if not RootPart then return end
 
-	for _, Prompt in Objects.Prompts do
-        if Prompt:GetAttribute("ParentRoom") and tonumber(Prompt:GetAttribute("ParentRoom")) ~= tonumber(LocalPlayer:GetAttribute("CurrentRoom")) then continue end
+	for _, Prompt in ipairs(Objects.Prompts) do
+        if Prompt and Prompt.Parent then
+            if Prompt:GetAttribute("ParentRoom") and tonumber(Prompt:GetAttribute("ParentRoom")) ~= tonumber(LocalPlayer:GetAttribute("CurrentRoom")) then continue end
 
-		if Prompt.Parent and (Prompt.Parent:IsA("BasePart") or Prompt.Parent:IsA("Model")) then
-			local Distance
-			if Prompt.Parent:IsA("BasePart") then
-				Distance = LocalPlayer:DistanceFromCharacter(Prompt.Parent.Position)
-			else
-				Distance = LocalPlayer:DistanceFromCharacter(Prompt.Parent:GetPivot().Position)
-			end
-			if Distance <= Prompt.MaxActivationDistance and Prompt.Enabled or Distance <= Prompt.MaxActivationDistance and Prompt.Name == "LongPushPrompt" or Distance <= Prompt.MaxActivationDistance and Prompt.Name == "BigPropPrompt" then
-				task.spawn(Functions.TriggerPrompt, Prompt)
-			end
-		end
+            local PromptParent = Prompt.Parent
+            if PromptParent:IsA("BasePart") or PromptParent:IsA("Model") then
+                local Distance = PromptParent:IsA("BasePart") and LocalPlayer:DistanceFromCharacter(PromptParent.Position) or LocalPlayer:DistanceFromCharacter(PromptParent:GetPivot().Position)
+                local MaxDist = Prompt.MaxActivationDistance or 50
+
+                if (Distance <= MaxDist and Prompt.Enabled) 
+                    or (Distance <= MaxDist and Prompt.Name == "LongPushPrompt") 
+                    or (Distance <= MaxDist and Prompt.Name == "BigPropPrompt") 
+                then
+                    task.spawn(Functions.TriggerPrompt, Prompt)
+                end
+            end
+        end
 	end
     Globals.LastAutoInteractFire = tick()
 end)
