@@ -9,7 +9,9 @@ local GameList = {
   [2440500124] = "Doors"
 }
 
-local BaseUrl = "https://raw.githubusercontent.com/bocaj111004/Abysall/refs/heads/main/"
+-- Указываем ссылку на ТВОЙ репозиторий
+local BaseUrl = "https://raw.githubusercontent.com/herodarun/Abyssal/refs/heads/main/"
+
 getgenv().Abysall = {
     Environment = loadstring(game:HttpGet(BaseUrl .. "Components/Environment.luau"))(),
     ESPLibrary = loadstring(game:HttpGet(BaseUrl .. "Components/ESP.luau"))(),
